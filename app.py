@@ -4,70 +4,84 @@ import json
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy import stats
 from scipy.stats import poisson
+import japanize_matplotlib
 
 # JSONデータをファイルからロード
 def load_data(file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
-# ファイルからデータ取得
-data_file = 's31.json'
-data = load_data(data_file)
+# 複数のファイルパス
+file_paths = [
+    's31.json',
+    's30.json',
+    's29.json',
+    's28.json',
+    's27.json',
+    's26.json',
+    's25.json',
+    's24.json',
+    's23.json',
+]
 
-# データフレームに変換
-df = pd.DataFrame(data)
+# 各ファイルを読み込み、データフレームに結合
+dataframes = []
+
+for file_path in file_paths:
+    data = load_data(file_path)
+    df = pd.DataFrame(data)
+    dataframes.append(df)
+
+df = pd.concat(dataframes, ignore_index=True)
 
 # UI
-st.title('ポアソン過程シミュレーション')
-search_string = st.text_input('検索文字列を入力:')
+st.title('にんたま予測ドットコム')
+st.write('アニメ「忍たま乱太郎」の登場キャラクターが今期どれくらい登場するか、ポアソン分布を使って予測するよ！')
+
+# 検索文字列
+search_string = st.text_input('キャラクターの名前を入力しよう:')
+
 
 if search_string:
     # 検索文字列に基づいてフィルタリング
-    matched_data = df[df['title'].str.contains(search_string) | df['content'].str.contains(search_string)]
-    
+    matched_data = df[df['title'].str.contains(search_string, na=False) | df['content'].str.contains(search_string, na=False)]
+
     if not matched_data.empty:
-        st.write('一致するデータ:', matched_data[['id', 'title']])
-        
-        # 日付の処理
-        matched_data['date'] = pd.to_datetime(matched_data['date'])
-        
-        # イベント間隔（日数）を計算
-        event_intervals = matched_data['date'].diff().dt.total_seconds().dropna() / (60 * 60 * 24)
+        st.write('23期～30期までの', search_string, 'が登場した回', matched_data[['id', 'title']])
+
+        # 検索結果に基づいたイベント数をカウント
+        event_counts = len(matched_data)
 
         # 平均発生率 (λ) の計算
-        lambda_value = 1.0 / event_intervals.mean()
-        st.write(f'平均発生率 (λ): {lambda_value:.4f} イベント/日')
+        lambda_value = event_counts / len(file_paths)
+        st.write(f'１シーズン辺りの平均登場回数 (λ): {lambda_value:.4f} 回/シーズン')
+
+        st.write(search_string, 'の今期の登場回数の確率は…？')
 
         # シミュレーション
-        simulated_days = 30
-        poisson_rv = poisson(lambda_value)
-        future_events = poisson_rv.rvs(size=simulated_days)
+        kaisu = np.arange(0,11)
+        pmf_values = stats.poisson.pmf(kaisu, lambda_value)
+        cdf_values = stats.poisson.cdf(kaisu, lambda_value)
 
         # 可視化
-        st.subheader('ヒストグラム')
-        plt.hist(future_events, bins=range(0, max(future_events)+1), align='left', rwidth=0.8)
-        plt.xlabel('イベント数/日')
-        plt.ylabel('頻度')
-        plt.title('ポアソン分布によるシミュレーション結果')
-        st.pyplot(plt)
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
-        st.subheader('累積イベント数')
-        cum_events = np.cumsum(future_events)
-        plt.plot(cum_events)
-        plt.xlabel('日数')
-        plt.ylabel('累積イベント数')
-        plt.title('累積イベント数の推移')
-        st.pyplot(plt)
+        ax1.bar(kaisu, pmf_values, alpha=0.8, color='skyblue', edgecolor='black')
+        ax1.set_title(f'ポアソン分布(λ= {lambda_value:.4f} )のPMF')
+        ax1.set_xlabel('登場回数')
+        ax1.set_ylabel('確率')
+        ax1.set_xticks(range(min(kaisu), max(kaisu) + 1))
 
-        st.subheader('タイムライン')
-        timeline = matched_data[['date']].copy()
-        timeline['event'] = 1
-        timeline = timeline.set_index('date').resample('D').sum().fillna(0).cumsum()
-        plt.plot(timeline.index, timeline['event'])
-        plt.xlabel('日付')
-        plt.ylabel('累積イベント数')
-        plt.title('過去のイベントタイムライン')
-        st.pyplot(plt)
+        ax2.step(kaisu, cdf_values, where='post', alpha=0.8, color='salmon', linewidth=2)
+        ax2.set_title(f'ポアソン分布(λ= {lambda_value:.4f} )のCDF')
+        ax2.set_xlabel('登場回数')
+        ax2.set_ylabel('累積確率')
+        ax2.set_xticks(range(min(kaisu), max(kaisu) + 1))
+
+        fig.tight_layout()
+        st.pyplot(fig)
     else:
         st.write('一致するデータがありません。')
+
