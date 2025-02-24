@@ -6,7 +6,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 from scipy.stats import poisson
-import japanize_matplotlib
+import matplotlib
+
+# フォント設定 (日本語フォントがインストールされている前提)
+matplotlib.rcParams['font.family'] = 'IPAGothic'
 
 # JSONデータをファイルからロード
 def load_data(file_path):

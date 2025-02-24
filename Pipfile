@@ -4,12 +4,12 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+japanize-matplotlib = "*"
 streamlit = "*"
 pandas = "*"
 matplotlib = "*"
 numpy = "*"
 scipy = "*"
-japanize-matplotlib = "*"
 
 [dev-packages]
 

@@ -4,7 +4,7 @@
 ### 実行方法
 ```
 $ pip install pipenv
-$ pipenv install streamlit pandas matplotlib numpy scipy japanize-matplotlib
+$ pipenv install streamlit pandas matplotlib numpy scipy 
 $ pipenv run streamlit run app.py
 ```
 ### Webアプリ
